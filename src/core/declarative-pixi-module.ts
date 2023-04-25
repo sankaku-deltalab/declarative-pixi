@@ -15,9 +15,11 @@ export class TDeclarativePixi {
 
     const newObjects = new Map();
     for (const id of allIds) {
-      if (id in newIds && !(id in oldIds)) {
+      const newDecObj: AnyDeclarationObject<Cfg> | undefined =
+        newDecObjects[id];
+      const oldObj = oldObjects.get(id);
+      if (newDecObj !== undefined && oldObj === undefined) {
         // new comer
-        const newDecObj = newDecObjects[id];
         const conversion = state.conversions[newDecObj.type];
 
         const pixiObj = conversion.createPixiObject(
@@ -27,10 +29,8 @@ export class TDeclarativePixi {
         );
         state.root.addChild(pixiObj);
         newObjects.set(newDecObj.id, {decObj: newDecObj, pixiObj});
-      } else if (!(id in newIds) && id in oldIds) {
+      } else if (newDecObj === undefined && oldObj !== undefined) {
         // removed
-        const oldObj = oldObjects.get(id);
-        if (oldObj === undefined) throw new Error('unknown error');
         const conversion = state.conversions[oldObj.decObj.type];
 
         state.root.removeChild(oldObj.pixiObj);
@@ -40,12 +40,9 @@ export class TDeclarativePixi {
           oldObj.pixiObj,
           context
         );
-      } else {
+      } else if (newDecObj !== undefined && oldObj !== undefined) {
         // maybe should update
-        const newDecObj = newDecObjects[id];
         const conversion = state.conversions[newDecObj.type];
-        const oldObj = oldObjects.get(id);
-        if (oldObj === undefined) throw new Error('unknown error');
 
         const shouldUpdate = conversion.shouldUpdate(
           id,
@@ -66,6 +63,8 @@ export class TDeclarativePixi {
           decObj: newDecObj,
           pixiObj: oldObj.pixiObj,
         });
+      } else {
+        throw new Error('Unknown error');
       }
     }
     return {
